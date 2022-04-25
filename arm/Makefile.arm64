@@ -11,6 +11,7 @@ arch_LDFLAGS += -z notext
 CFLAGS += -mstrict-align
 CFLAGS += -I $(SRCDIR)/lib/qcbor/inc
 CFLAGS += -DQCBOR_DISABLE_FLOAT_HW_USE -DQCBOR_DISABLE_PREFERRED_FLOAT -DUSEFULBUF_DISABLE_ALL_FLOAT
+CFLAGS += -I $(SRCDIR)/lib/token_verifier
 
 sve_flag := $(call cc-option, -march=armv8.5-a+sve, "")
 ifneq ($(strip $(sve_flag)),)
@@ -38,6 +39,9 @@ cflatobjs += lib/arm64/spinlock.o
 cflatobjs += lib/arm64/gic-v3-its.o lib/arm64/gic-v3-its-cmd.o
 cflatobjs += lib/arm64/rsi.o
 cflatobjs += lib/qcbor/src/qcbor_decode.o lib/qcbor/src/UsefulBuf.o
+cflatobjs += lib/token_verifier/token_verifier.o
+cflatobjs += lib/token_verifier/token_dumper.o
+
 
 ifeq ($(CONFIG_EFI),y)
 cflatobjs += lib/acpi.o
@@ -68,4 +72,5 @@ include $(SRCDIR)/$(TEST_DIR)/Makefile.common
 
 arch_clean: arm_clean
 	$(RM) lib/arm64/.*.d		\
-	      lib/qcbor/src/.*.d
+	      lib/qcbor/src/.*.d	\
+	      lib/token_verifier/.*.d

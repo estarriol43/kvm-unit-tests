@@ -263,9 +263,6 @@ void setup(const void *fdt, phys_addr_t freemem_start)
 	/* cpu_init must be called before thread_info_init */
 	thread_info_init(current_thread_info(), 0);
 
-	/* mem_init must be called before io_init */
-	io_init();
-
 	timer_save_state();
 
 	ret = dt_get_bootargs(&bootargs);
@@ -276,6 +273,9 @@ void setup(const void *fdt, phys_addr_t freemem_start)
 
 	if (!(auxinfo.flags & AUXINFO_MMU_OFF))
 		setup_vm();
+
+	/* mem_init and setup_vm must be called before io_init */
+	io_init();
 }
 
 #ifdef CONFIG_EFI

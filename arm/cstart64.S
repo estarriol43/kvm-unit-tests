@@ -15,6 +15,7 @@
 #include <asm/processor.h>
 #include <asm/thread_info.h>
 #include <asm/sysreg.h>
+#include <asm/smc-rsi.h>
 
 #ifdef CONFIG_EFI
 #include "efi/crt0-efi-aarch64.S"
@@ -66,6 +67,11 @@ start:
 	b	1b
 
 1:
+	/*
+	 * For a Realm, before we touch any memory, we must
+	 * make sure it is in the RsiRipas == RSI_RAM state.
+	 */
+	bl	__early_mem_setup
 	/* zero BSS */
 	adrp	x4, bss
 	add	x4, x4, :lo12:bss
@@ -177,6 +183,96 @@ arm_smccc_hvc:
 .globl arm_smccc_smc
 arm_smccc_smc:
 	do_smccc_call smc
+
+__early_mem_setup:
+#ifndef CONFIG_EFI
+	/* Preserve x0 - x3 */
+	mov	x5, x0
+	mov	x6, x1
+	mov	x7, x2
+	mov	x8, x3
+
+	/*
+	 * Check for EL3, otherwise an SMC instruction
+	 * will cause an UNDEFINED exception.
+	 */
+	mrs	x9, ID_AA64PFR0_EL1
+	lsr	x9, x9, #12
+	and	x9, x9, 0b11
+	cbnz	x9, 1f
+	ret
+
+1:
+	/*
+	 * Are we a realm? Request the RSI ABI version.
+	 * If KVM is catching SMCs, it returns an error in x0 (~0UL)
+	 */
+	movz	x0, :abs_g2_s:SMC_RSI_ABI_VERSION
+	movk	x0, :abs_g1_nc:SMC_RSI_ABI_VERSION
+	movk	x0, :abs_g0_nc:SMC_RSI_ABI_VERSION
+	ldr	x1, =RSI_ABI_VERSION
+	smc	#0
+
+	/*
+	 * RMM if present, returns RSI_SUCCESS if the requested
+	 * version is compatible. Otherwise returns RSI_ERROR_INPUT,
+	 * which is fatal for the Realm.
+	 */
+	cmp	x0, #RSI_ERROR_INPUT
+	beq	halt
+
+	/*
+	 * Anything other than RSI_SUCCESS or RSI_ERROR_INPUT
+	 * indicates, RMM is not present.
+	 */
+	cmp	x0, #RSI_SUCCESS
+	bne	3f
+
+	/*
+	 * For realms, we must mark area from bss
+	 * to the end of stack as memory before it is
+	 * accessed, as they are not populated as part
+	 * of the initial image. As such we can run
+	 * this unconditionally irrespective of whether
+	 * we are a normal VM or Realm.
+	 */
+	/* x1 = bss */
+	adrp	x1, bss
+
+	/* x7 = SMC_RSI_IPA_STATE_SET */
+	movz	x7, :abs_g2_s:SMC_RSI_IPA_STATE_SET
+	movk	x7, :abs_g1_nc:SMC_RSI_IPA_STATE_SET
+	movk	x7, :abs_g0_nc:SMC_RSI_IPA_STATE_SET
+
+	/* x9 = (end of stack) */
+	adrp	x9, (stacktop + PAGE_SIZE)
+2:
+	/* x2 = (end of stack) */
+	mov	x2, x9
+
+	/* x3 = RIPAS_RAM */
+	mov	x3, #1
+	/* x4 = RSI_NO_CHANGE_DESTROYED */
+	mov	x4, #RSI_NO_CHANGE_DESTROYED
+
+	/* x0 = SMC_RSI_IPA_STATE_SET */
+	mov	x0, x7
+	/* Run the RSI request */
+	smc	#0
+
+	/* halt if there is an error */
+	cbnz x0, halt
+
+	/* Check if (next == end of stack) */
+	cmp x1, x9
+	bne 2b
+3:
+	mov	x3, x8
+	mov	x2, x7
+	mov	x1, x6
+	mov	x0, x5
+#endif		/* !CONFIG_EFI */
+	ret
 
 get_mmu_off:
 	adrp	x0, auxinfo

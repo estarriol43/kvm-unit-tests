@@ -7,6 +7,8 @@
 #include <devicetree.h>
 #include <asm/gic.h>
 #include <asm/io.h>
+#include <asm/rsi.h>
+
 
 struct gicv2_data gicv2_data;
 struct gicv3_data gicv3_data;
@@ -108,8 +110,12 @@ int gicv2_init(void)
 
 int gicv3_init(void)
 {
-	return gic_get_dt_bases("arm,gic-v3", &gicv3_data.dist_base,
+	int ret = gic_get_dt_bases("arm,gic-v3", &gicv3_data.dist_base,
 			&gicv3_data.redist_bases[0], &its_data.base);
+
+	gicv3_data.shared = !arm_is_protected_mmio(virt_to_phys(gicv3_data.dist_base),
+						   SZ_4K);
+	return ret;
 }
 
 int gic_version(void)

@@ -83,12 +83,18 @@ struct gicv3_data {
 	u8 *lpi_prop;
 	void *lpi_pend[NR_CPUS];
 	unsigned int irq_nr;
+	bool shared;
 };
 extern struct gicv3_data gicv3_data;
 
 #define gicv3_dist_base()		(gicv3_data.dist_base)
 #define gicv3_redist_base()		(gicv3_data.redist_base[smp_processor_id()])
 #define gicv3_sgi_base()		(gicv3_data.redist_base[smp_processor_id()] + SZ_64K)
+
+static inline bool gicv3_is_shared(void)
+{
+	return gicv3_data.shared;
+}
 
 extern int gicv3_init(void);
 extern void gicv3_enable_defaults(void);
@@ -102,6 +108,7 @@ extern void gicv3_lpi_set_clr_pending(int rdist, int n, bool set);
 extern void gicv3_lpi_alloc_tables(void);
 extern void gicv3_lpi_rdist_enable(int redist);
 extern void gicv3_lpi_rdist_disable(int redist);
+extern void *gicv3_alloc_pages(unsigned int order);
 
 static inline void gicv3_do_wait_for_rwp(void *base)
 {

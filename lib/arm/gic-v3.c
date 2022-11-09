@@ -7,6 +7,13 @@
 #include <asm/io.h>
 #include <alloc_page.h>
 
+void *gicv3_alloc_pages(unsigned int order)
+{
+	if (gicv3_is_shared())
+		return alloc_pages_shared(order);
+	return alloc_pages(order);
+}
+
 void gicv3_set_redist_base(size_t stride)
 {
 	u32 aff = mpidr_compress(get_mpidr());
@@ -171,7 +178,9 @@ void gicv3_lpi_alloc_tables(void)
 	u64 prop_val;
 	int cpu;
 
-	gicv3_data.lpi_prop = alloc_pages(order);
+	assert(gicv3_redist_base());
+
+	gicv3_data.lpi_prop = gicv3_alloc_pages(order);
 
 	/* ID bits = 13, ie. up to 14b LPI INTID */
 	prop_val = (u64)(virt_to_phys(gicv3_data.lpi_prop)) | 13;
@@ -186,7 +195,7 @@ void gicv3_lpi_alloc_tables(void)
 
 		writeq(prop_val, ptr + GICR_PROPBASER);
 
-		gicv3_data.lpi_pend[cpu] = alloc_pages(order);
+		gicv3_data.lpi_pend[cpu] = gicv3_alloc_pages(order);
 		pend_val = (u64)(virt_to_phys(gicv3_data.lpi_pend[cpu]));
 		writeq(pend_val, ptr + GICR_PENDBASER);
 	}

@@ -214,4 +214,16 @@ static inline void *phys_to_virt(unsigned long address)
 }
 #endif
 
+#ifndef set_memory_encrypted
+static inline void set_memory_encrypted(unsigned long mem, size_t size)
+{
+}
+#endif
+
+#ifndef set_memory_decrypted
+static inline void set_memory_decrypted(unsigned long mem, size_t size)
+{
+}
+#endif
+
 #endif /* _ASM_GENERIC_IO_H_ */

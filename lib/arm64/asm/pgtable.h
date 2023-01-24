@@ -21,6 +21,13 @@
 
 #include <linux/compiler.h>
 
+extern unsigned long prot_ns_shared;
+/*
+ * The Non-secure shared bit for Realms is actually part of the output
+ * address, however it is modeled as a PTE attribute.
+*/
+#define PTE_NS_SHARED		(prot_ns_shared)
+
 /*
  * Highest possible physical address supported.
  */

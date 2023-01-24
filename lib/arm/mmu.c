@@ -23,6 +23,8 @@
 
 pgd_t *mmu_idmap;
 
+/* Used by Realms, depends on IPA size */
+unsigned long prot_ns_shared = 0;
 unsigned long phys_mask_shift = 48;
 
 /* CPU 0 starts with disabled MMU */

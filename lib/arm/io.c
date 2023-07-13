@@ -14,7 +14,10 @@
 #include <config.h>
 #include <asm/psci.h>
 #include <asm/spinlock.h>
+#include <asm/rsi.h>
 #include <asm/io.h>
+#include <asm/mmu-api.h>
+#include <asm/pgtable.h>
 
 #include "io.h"
 
@@ -29,6 +32,25 @@ static struct spinlock uart_lock;
 #define UART_EARLY_BASE (u8 *)(unsigned long)CONFIG_UART_EARLY_BASE
 static volatile u8 *uart0_base = UART_EARLY_BASE;
 bool is_pl011_uart;
+
+static inline volatile u8 *get_uart_base(void)
+{
+	/*
+	 * The address of the UART base may be different
+	 * based on whether we are running with/without
+	 * MMU enabled.
+	 *
+	 * For realms, we must force to use the shared physical
+	 * alias with MMU disabled, to make sure the I/O can
+	 * be emulated.
+	 * When the MMU is turned ON, the mappings are created
+	 * appropriately.
+	 */
+	if (mmu_enabled() ||
+	    arm_is_protected_mmio((unsigned long)uart0_base, RSI_GRANULE_SIZE))
+		return uart0_base;
+	return (u8 *)arm_shared_phys_alias((void *)uart0_base);
+}
 
 static void uart0_init_fdt(void)
 {
@@ -109,9 +131,11 @@ void io_init(void)
 
 void puts(const char *s)
 {
+	volatile u8 *uart_base = get_uart_base();
+
 	spin_lock(&uart_lock);
 	while (*s)
-		writeb(*s++, uart0_base);
+		writeb(*s++, uart_base);
 	spin_unlock(&uart_lock);
 }
 

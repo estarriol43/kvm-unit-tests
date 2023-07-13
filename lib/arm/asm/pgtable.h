@@ -112,4 +112,9 @@ static inline pte_t *pte_alloc(pmd_t *pmd, unsigned long addr)
 	return pte_offset(pmd, addr);
 }
 
+static inline unsigned long arm_shared_phys_alias(void *x)
+{
+	return ((unsigned long)(x) | PTE_NS_SHARED);
+}
+
 #endif /* _ASMARM_PGTABLE_H_ */

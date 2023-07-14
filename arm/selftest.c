@@ -20,6 +20,8 @@
 #include <asm/mmu.h>
 #include <asm/barrier.h>
 
+#include <asm/sve-vl-test.h>
+
 static cpumask_t ready, valid;
 
 static void __user_psci_system_off(void)
@@ -59,6 +61,10 @@ static void check_setup(int argc, char **argv)
 			       "number of CPUs matches expectation");
 			report_info("found %d CPUs", nr_cpus);
 			++nr_tests;
+
+		} else if (strcmp(argv[i], "sve-vl") == 0) {
+			if (check_arm_sve_vl(val))
+				nr_tests++;
 		}
 
 		report_prefix_pop();

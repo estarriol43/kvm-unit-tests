@@ -68,6 +68,7 @@ tests += $(TEST_DIR)/fpu.$(exe)
 tests += $(TEST_DIR)/realm-rsi.$(exe)
 tests += $(TEST_DIR)/realm-sea.$(exe)
 tests += $(TEST_DIR)/realm-attest.$(exe)
+tests += $(TEST_DIR)/realm-ns-memory.$(exe)
 
 include $(SRCDIR)/$(TEST_DIR)/Makefile.common
 

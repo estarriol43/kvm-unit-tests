@@ -165,6 +165,7 @@ void print_binstr(unsigned long x);
 #define SZ_128K			(1 << 17)
 #define SZ_1M			(1 << 20)
 #define SZ_2M			(1 << 21)
+#define SZ_512M			(1 << 29)
 #define SZ_1G			(1 << 30)
 #define SZ_2G			(1ul << 31)
 

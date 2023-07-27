@@ -71,3 +71,66 @@ void arm_rsi_init(void)
 	/* Set the upper bit of the IPA as the NS_SHARED pte attribute */
 	prot_ns_shared = (1UL << phys_mask_shift);
 }
+
+static unsigned rsi_set_addr_range_state(unsigned long start, unsigned long end,
+					 enum ripas_t state, unsigned int flags,
+					 unsigned long *top)
+{
+	struct smccc_result res;
+
+	rsi_invoke(SMC_RSI_IPA_STATE_SET, start, end, state, flags,
+		   0, 0, 0, 0, 0, 0, 0, &res);
+	*top = res.r1;
+	return res.r0;
+}
+
+static void arm_set_memory_state(unsigned long start,
+				 unsigned long size,
+				 unsigned int ripas,
+				 unsigned int flags)
+{
+	int ret;
+	unsigned long end, top;
+	unsigned long old_start = start;
+
+	if (!is_realm())
+		return;
+
+	start = ALIGN_DOWN(start, RSI_GRANULE_SIZE);
+	if (start != old_start)
+		size += old_start - start;
+	end = ALIGN(start + size, RSI_GRANULE_SIZE);
+	while (start != end) {
+		ret = rsi_set_addr_range_state(start, end, ripas, flags, &top);
+		assert(!ret);
+		assert(top <= end);
+		start = top;
+	}
+}
+
+/*
+ * Convert the IPA state of the given range to RIPAS_RAM, ignoring the
+ * fact that the host could have destroyed the contents and we don't
+ * rely on the previous state of the contents.
+ */
+void arm_set_memory_protected(unsigned long start, unsigned long size)
+{
+	arm_set_memory_state(start, size, RIPAS_RAM, RSI_CHANGE_DESTROYED);
+}
+
+/*
+ * Convert the IPA state of the given range to RSI_RAM, ensuring that the
+ * host has not destroyed any of the contents in the IPA range. Useful in
+ * converting a range of addresses where some of the IPA may already be in
+ * RSI_RAM state (e.g., images loaded at boot) and we want to make sure the
+ * host hasn't modified (by destroying them) the contents.
+ */
+void arm_set_memory_protected_safe(unsigned long start, unsigned long size)
+{
+	arm_set_memory_state(start, size, RIPAS_RAM, RSI_NO_CHANGE_DESTROYED);
+}
+
+void arm_set_memory_shared(unsigned long start, unsigned long size)
+{
+	arm_set_memory_state(start, size, RIPAS_EMPTY, RSI_CHANGE_DESTROYED);
+}

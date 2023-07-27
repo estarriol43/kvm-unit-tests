@@ -34,4 +34,15 @@ static inline bool is_realm(void)
 	return rsi_present;
 }
 
+enum ripas_t {
+	RIPAS_EMPTY,
+	RIPAS_RAM,
+	RIPAS_DESTROYED,
+	RIPAS_IO,
+};
+
+void arm_set_memory_protected(unsigned long va, size_t size);
+void arm_set_memory_protected_safe(unsigned long va, size_t size);
+void arm_set_memory_shared(unsigned long va, size_t size);
+
 #endif /* __ASMARM64_RSI_H_ */

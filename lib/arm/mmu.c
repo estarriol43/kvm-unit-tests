@@ -13,6 +13,7 @@
 #include <asm/setup.h>
 #include <asm/page.h>
 #include <asm/io.h>
+#include <asm/rsi.h>
 
 #include "alloc_page.h"
 #include "vmalloc.h"

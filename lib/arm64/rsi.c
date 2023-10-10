@@ -171,3 +171,55 @@ void arm_set_memory_shared(unsigned long start, unsigned long size)
 {
 	arm_set_memory_state(start, size, RIPAS_EMPTY, RSI_CHANGE_DESTROYED);
 }
+
+int rsi_attest_token_init(unsigned long *challenge, unsigned long *max_size)
+{
+	struct smccc_result res;
+
+	rsi_invoke(SMC_RSI_ATTEST_TOKEN_INIT,
+		   challenge[0], challenge[1], challenge[2],
+		   challenge[3], challenge[4], challenge[5],
+		   challenge[6], challenge[7], 0, 0, 0, &res);
+
+	if (max_size)
+		*max_size = res.r1;
+	return res.r0;
+}
+
+int rsi_attest_token_continue(phys_addr_t addr,
+			      unsigned long offset,
+			      unsigned long size,
+			      unsigned long *len)
+{
+	struct smccc_result res = { 0 };
+
+	rsi_invoke(SMC_RSI_ATTEST_TOKEN_CONTINUE, addr, offset, size,
+		   0, 0, 0, 0, 0, 0, 0, 0, &res);
+	switch (res.r0) {
+	case RSI_SUCCESS:
+	case RSI_INCOMPLETE:
+		if (len)
+			*len = res.r1;
+		/* Fall through */
+	default:
+		break;
+	}
+	return res.r0;
+}
+
+void rsi_extend_measurement(unsigned int index, unsigned long size,
+			    unsigned long *measurement, struct smccc_result *res)
+{
+	rsi_invoke(SMC_RSI_MEASUREMENT_EXTEND, index, size,
+		   measurement[0], measurement[1],
+		   measurement[2], measurement[3],
+		   measurement[4], measurement[5],
+		   measurement[6], measurement[7],
+		   0, res);
+}
+
+void rsi_read_measurement(unsigned int index, struct smccc_result *res)
+{
+	rsi_invoke(SMC_RSI_MEASUREMENT_READ, index, 0,
+		   0, 0, 0, 0, 0, 0, 0, 0, 0, res);
+}

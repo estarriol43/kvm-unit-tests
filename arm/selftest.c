@@ -9,6 +9,7 @@
 #include <util.h>
 #include <devicetree.h>
 #include <memregions.h>
+#include <alloc_page.h>
 #include <vmalloc.h>
 #include <asm/setup.h>
 #include <asm/ptrace.h>
@@ -428,6 +429,123 @@ static void cpu_report(void *data __unused)
 	report_info("CPU%3d: MPIDR=%010" PRIx64, cpu, mpidr);
 }
 
+
+/*
+ * do_memtest: Accepts the following paramters.
+ *
+ * shared[=0/1] - Use shared page for the memtests.
+ * block[=0/1]  - Use SZ_2M allocation/free.
+ * nofree	- Do not free the pages after the test.
+ */
+static void do_memtest(int argc, char *argv[])
+{
+	int i;
+	int npages = 0;
+	bool result = true;
+	const char pattern = 0xFB;
+	void *prev_page = NULL;
+	uintptr_t *page_to_free = NULL;
+	int size;
+	void* (*alloc_order_fn)(unsigned int);
+	void (*free_order_fn)(void *, unsigned int);
+	bool shared = false;
+	bool block = false;
+	bool nofree = false;
+	int order = 0;
+
+	for (i = 2; i < argc; i++) {
+		long val, len;
+
+		len = parse_keyval(argv[i], &val);
+		if (len == -1) {
+			if (!strcmp(argv[i], "shared")) {
+				shared = true;
+				continue;
+			} else if (!strcmp(argv[i], "nofree")) {
+				nofree = true;
+				continue;
+			} else if (!strcmp(argv[i], "block")) {
+				block = true;
+			} else {
+				printf("Unknown options %s\n", argv[i]);
+				abort();
+			}
+		} else if (!strncmp(argv[i], "block", len)) {
+			block = !!val;
+		} else if (!strncmp(argv[i], "shared", len)) {
+			shared = !!val;
+		}
+	}
+
+	/* Block mapping is 2MB */
+	if (block)
+		order = (21 - PAGE_SHIFT);
+
+	size = (1 << order) * PAGE_SIZE;
+	if (shared) {
+		alloc_order_fn = &alloc_pages_shared;
+		free_order_fn = &free_pages_shared_by_order;
+	} else {
+		alloc_order_fn = &alloc_pages;
+		free_order_fn = &free_pages_by_order;
+	}
+
+	report_info("Running %smemtest with size %dK%s, order=%d",
+		    shared ? "shared " : "",
+		    size >> 10,
+		    nofree ? " with no freeing" :"",
+		    order);
+
+	while (1) {
+		void *page = alloc_order_fn(order);
+
+		if (!page)
+			break;
+		npages += 1;
+
+		memset(page, pattern, size);
+
+		for (i = 0; i < size; i += 1) {
+			if (((char *)page)[i] != pattern) {
+				result = false;
+				report(false, "Failed to find the pattern in page %p, expected: %d, got: %d\n",
+					page, pattern, ((char *)page)[i]);
+				goto exit;
+			}
+		}
+
+		/*
+		 * Save a pointer to the allocated page so that it can be
+		 * free'd at the end of the test.
+		*/
+		*(uintptr_t *)page = (uintptr_t)prev_page;
+		prev_page = page;
+	}
+
+	page_to_free = prev_page;
+	while (!nofree && page_to_free) {
+		prev_page = (uintptr_t *)(*page_to_free);
+		free_order_fn(page_to_free, order);
+		page_to_free = prev_page;
+	}
+
+exit:
+	report(result, "Tested with %dKB", (npages  * size) >> 10);
+}
+
+static void do_memstress(void)
+{
+	char shared[16] = "shared";
+	char block[16] = "block";
+	char nofree[16] = "nofree";
+	char null[4] = "";
+
+	do_memtest(4, &((char *[]){ null, null, shared, block })[0]);
+	do_memtest(3, &((char *[]){ null, null, block })[0]);
+	do_memtest(3, &((char *[]){ null, null, shared })[0]);
+	do_memtest(3, &((char *[]){ null, null, nofree })[0]);
+}
+
 int main(int argc, char **argv)
 {
 	report_prefix_push("selftest");
@@ -459,7 +577,10 @@ int main(int argc, char **argv)
 		smp_rmb();		/* Paired with wmb in cpu_report(). */
 		report(cpumask_full(&valid), "MPIDR test on all CPUs");
 		report_info("%d CPUs reported back", nr_cpus);
-
+	} else if (strcmp(argv[1], "memtest") == 0) {
+		do_memtest(argc, argv);
+	} else if (strcmp(argv[1], "memstress") == 0) {
+		do_memstress();
 	} else {
 		printf("Unknown subtest\n");
 		abort();

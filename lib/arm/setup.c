@@ -174,6 +174,7 @@ static void mem_init(phys_addr_t freemem_start)
 				mem.start = r->start;
 			if (r->end > mem.end)
 				mem.end = r->end;
+			arm_set_memory_protected_safe(r->start, r->end - r->start);
 		}
 	}
 	assert(mem.end && !(mem.start & ~PHYS_MASK));
@@ -208,7 +209,14 @@ static void freemem_push_fdt(void **freemem, const void *fdt)
 #endif
 
 	fdt_size = fdt_totalsize(fdt);
+
+	/*
+	 * Before we touch the memory @freemem, make sure it
+	 * is set to protected for Realms.
+	 */
+	arm_set_memory_protected_safe((unsigned long)*freemem, fdt_size);
 	ret = fdt_move(fdt, *freemem, fdt_size);
+
 	assert(ret == 0);
 	ret = dt_init(*freemem);
 	assert(ret == 0);
@@ -224,6 +232,7 @@ static void freemem_push_dt_initrd(void **freemem)
 	assert(ret == 0 || ret == -FDT_ERR_NOTFOUND);
 	if (ret == 0) {
 		initrd = *freemem;
+		arm_set_memory_protected_safe((unsigned long)initrd, initrd_size);
 		memmove(initrd, tmp, initrd_size);
 		*freemem += initrd_size;
 	}

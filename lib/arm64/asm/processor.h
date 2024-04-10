@@ -148,6 +148,9 @@ static inline unsigned long get_id_aa64pfr0_el1(void)
 }
 
 #define ID_AA64PFR0_EL1_SVE_SHIFT	32
+#define ID_AA64PFR0_EL1_EL3		(0xf << 12)
+#define ID_AA64PFR0_EL1_EL3_NI		(0x0 << 12)
+
 
 static inline bool system_supports_sve(void)
 {

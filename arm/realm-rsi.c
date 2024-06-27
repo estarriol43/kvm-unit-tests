@@ -126,6 +126,56 @@ static void rsi_test_version(void)
 	report_prefix_pop();
 }
 
+#define ALLOC_SIZE	(SZ_1M * 8)
+#define HOLE_SIZE	(1UL << 12) + SZ_16K
+#define HOLE_OFFSET	(1UL << 12)
+
+static void rsi_test_get_ipa_state(void)
+{
+	unsigned long top, end, start, hole_start, hole_end;
+	unsigned long ripas;
+	void *mem = memalign(PAGE_SIZE, ALLOC_SIZE);
+
+	report_prefix_push("get_ipa_state");
+
+	if (!mem) {
+		report_abort("Unable to allocate memory");
+		goto out;
+	}
+
+	start = virt_to_phys(mem);
+	end = start + ALLOC_SIZE;
+	hole_start = start + HOLE_OFFSET;
+	hole_end = hole_start + HOLE_SIZE;
+
+	set_memory_decrypted(hole_start, HOLE_SIZE);
+
+	report_info("Memory: 0x%lx - 0x%lx, Hole: 0x%lx-0x%lx\n",
+		     start, end, hole_start, hole_end);
+	while (start < end) {
+		if (rsi_get_addr_range_state(start, end, &ripas, &top) != RSI_SUCCESS) {
+			report_abort("Unexpected failure! %lx-%lx\n", start, end);
+			return;
+		}
+
+		if (start < hole_start)
+			report(top <= hole_start && ripas == RIPAS_RAM,
+				"RIPAS Ram for region before the hole (0x%lx, 0x%lx)",
+				start, top);
+		else if (start < hole_end)
+			report(top <= hole_end && ripas == RIPAS_EMPTY,
+				"RIPAS Empty for hole region (0x%lx-0x%lx)",
+				start, top);
+		else
+			report(top <= end && ripas == RIPAS_RAM,
+				"RIPAS Ram for covering region after hole (0x%lx-0x%lx)",
+				start, top);
+		start = top;
+	}
+out:
+	report_prefix_pop();
+}
+
 int main(int argc, char **argv)
 {
 	int i;
@@ -141,6 +191,7 @@ int main(int argc, char **argv)
 		rsi_test_version();
 		rsi_test_host_call();
 		rsi_test_hvc();
+		rsi_test_get_ipa_state();
 	} else {
 		for (i = 1; i < argc; i++) {
 			if (strcmp(argv[i], "version") == 0) {
@@ -149,6 +200,8 @@ int main(int argc, char **argv)
 				rsi_test_hvc();
 			} else if (strcmp(argv[i], "host_call") == 0) {
 				rsi_test_host_call();
+			} else if (strcmp(argv[i], "get_ipa_state") == 0) {
+				rsi_test_get_ipa_state();
 			} else {
 				report_abort("Unknown subtest '%s'", argv[1]);
 			}

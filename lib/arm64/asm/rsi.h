@@ -84,6 +84,9 @@ enum ripas_t {
 	RIPAS_IO,
 };
 
+int rsi_get_addr_range_state(unsigned long start, unsigned long end,
+			     unsigned long *ripas, unsigned long *top);
+
 void arm_set_memory_protected(unsigned long va, size_t size);
 void arm_set_memory_protected_safe(unsigned long va, size_t size);
 void arm_set_memory_shared(unsigned long va, size_t size);

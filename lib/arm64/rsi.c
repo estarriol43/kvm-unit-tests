@@ -84,8 +84,8 @@ static unsigned rsi_set_addr_range_state(unsigned long start, unsigned long end,
 	return res.r0;
 }
 
-static int rsi_get_addr_range_state(unsigned long start, unsigned long end,
-				    unsigned long *ripas, unsigned long *top)
+int rsi_get_addr_range_state(unsigned long start, unsigned long end,
+			     unsigned long *ripas, unsigned long *top)
 {
 	struct smccc_result res;
 

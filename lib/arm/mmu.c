@@ -251,6 +251,9 @@ void __iomem *__ioremap(phys_addr_t phys_addr, size_t size)
 
 	assert(sizeof(long) == 8 || !(phys_addr >> 32));
 
+	if (!arm_is_protected_mmio(phys_addr, size))
+		prot = __pgprot(pgprot_val(prot) | PTE_NS_SHARED);
+
 	if (mmu_enabled()) {
 		pgtable = current_thread_info()->pgtable;
 	} else {

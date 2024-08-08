@@ -17,5 +17,6 @@ static inline void arm_rsi_init(void) {}
 static inline void arm_set_memory_protected(unsigned long va, size_t size) {}
 static inline void arm_set_memory_protected_safe(unsigned long va, size_t size) {}
 static inline void arm_set_memory_shared(unsigned long va, size_t size) {}
+static inline bool arm_is_protected_mmio(unsigned long pa, size_t size) { return false; }
 
 #endif /* __ASMARM_RSI_H_ */

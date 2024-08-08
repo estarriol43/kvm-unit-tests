@@ -44,5 +44,6 @@ enum ripas_t {
 void arm_set_memory_protected(unsigned long va, size_t size);
 void arm_set_memory_protected_safe(unsigned long va, size_t size);
 void arm_set_memory_shared(unsigned long va, size_t size);
+bool arm_is_protected_mmio(unsigned long pa, size_t size);
 
 #endif /* __ASMARM64_RSI_H_ */

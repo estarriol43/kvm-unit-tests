@@ -84,6 +84,43 @@ static unsigned rsi_set_addr_range_state(unsigned long start, unsigned long end,
 	return res.r0;
 }
 
+static int rsi_get_addr_range_state(unsigned long start, unsigned long end,
+				    unsigned long *ripas, unsigned long *top)
+{
+	struct smccc_result res;
+
+	rsi_invoke(SMC_RSI_IPA_STATE_GET, start, end, 0, 0,
+		   0, 0, 0, 0, 0, 0, 0, &res);
+	if (res.r0 == RSI_SUCCESS) {
+		*top = res.r1;
+		*ripas = res.r2;
+	}
+	return res.r0;
+}
+
+bool arm_is_protected_mmio(unsigned long pa, unsigned long size)
+{
+	unsigned long end = pa + size;
+	unsigned long next = 0, ripas = RIPAS_EMPTY;
+
+	if (!is_realm())
+		return false;
+
+	pa = ALIGN_DOWN(pa, RSI_GRANULE_SIZE);
+	end = ALIGN(end, RSI_GRANULE_SIZE);
+
+	while (pa < end) {
+		if (rsi_get_addr_range_state(pa, end, &ripas, &next))
+			break;
+		assert(next > pa);
+		if (ripas != RIPAS_IO)
+			break;
+		pa = next;
+	}
+
+	return (size && pa >= end);
+}
+
 static void arm_set_memory_state(unsigned long start,
 				 unsigned long size,
 				 unsigned int ripas,

@@ -59,6 +59,7 @@ tests += $(TEST_DIR)/cache.$(exe)
 tests += $(TEST_DIR)/debug.$(exe)
 tests += $(TEST_DIR)/fpu.$(exe)
 tests += $(TEST_DIR)/realm-rsi.$(exe)
+tests += $(TEST_DIR)/realm-sea.$(exe)
 
 include $(SRCDIR)/$(TEST_DIR)/Makefile.common
 

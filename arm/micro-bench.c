@@ -24,6 +24,8 @@
 #include <asm/gic-v3-its.h>
 #include <asm/rsi.h>
 #include <asm/timer.h>
+#include <asm/page.h>
+#include <alloc.h>
 
 #define QEMU_MMIO_ADDR		0x0a000008
 
@@ -329,6 +331,33 @@ static void eoi_exec(void)
 
 static bool exec_select(void);
 
+static void *page_fault_mem;
+
+/* 1000MB */
+static const size_t page_fault_mem_size = 1024 * 1024 * 1000;
+/* 1MB */
+static const size_t page_fault_mem_unit = 1UL << 20;
+
+static const u32 page_fault_time = page_fault_mem_size / page_fault_mem_unit;
+
+static bool page_fault_prep(void)
+{
+	page_fault_mem = malloc(page_fault_mem_size);
+	if (!page_fault_mem) {
+		printf("Failed to allocate memory for page fault test\n");
+		return false;
+	}
+	return true;
+}
+
+static void page_fault_exec(void)
+{
+	static size_t i = 0;
+	size_t page_fault_end = i + page_fault_mem_unit;
+	for (; i < page_fault_end; i += PAGE_SIZE)
+		((volatile char *)page_fault_mem)[i] = 1;
+}
+
 struct exit_test {
 	const char *name;
 	bool (*prep)(void);
@@ -348,6 +377,7 @@ static struct exit_test tests[] = {
 	{"ipi_hw",		ipi_hw_prep,		ipi_exec,		NULL,		65536,		true},
 	{"lpi",			lpi_prep,		lpi_exec,		NULL,		65536,		true},
 	{"timer_10ms",		timer_prep,		timer_exec,		timer_post,	256,		true},
+	{"page_fault",		page_fault_prep,	page_fault_exec,	NULL,		page_fault_time,true},
 };
 
 static bool exec_select(void)

@@ -22,6 +22,7 @@
 #include <util.h>
 #include <asm/gic.h>
 #include <asm/gic-v3-its.h>
+#include <asm/rsi.h>
 #include <asm/timer.h>
 
 #define QEMU_MMIO_ADDR		0x0a000008
@@ -262,6 +263,22 @@ static void hvc_exec(void)
 	asm volatile("mov w0, #0x4b000000; hvc #0" ::: "w0");
 }
 
+#define FID_INVALID		0xc5000041
+static struct rsi_host_call __attribute__((aligned(256))) host_call_data = { FID_INVALID };
+
+static bool host_call_prep(void)
+{
+	return is_realm();
+}
+
+static void host_call_exec(void)
+{
+	struct smccc_result res;
+
+	arm_smccc_smc(SMC_RSI_HOST_CALL, virt_to_phys(&host_call_data),
+		       0, 0, 0, 0, 0, 0, 0, 0, 0, 0, &res);
+}
+
 static void *userspace_emulated_addr;
 
 static bool mmio_read_user_prep(void)
@@ -307,6 +324,7 @@ struct exit_test {
 
 static struct exit_test tests[] = {
 	{"hvc",			NULL,			hvc_exec,		NULL,		65536,		true},
+	{"host_call",		host_call_prep,		host_call_exec,		NULL,		65536,		true},
 	{"mmio_read_user",	mmio_read_user_prep,	mmio_read_user_exec,	NULL,		65536,		true},
 	{"mmio_read_vgic",	NULL,			mmio_read_vgic_exec,	NULL,		65536,		true},
 	{"eoi",			NULL,			eoi_exec,		NULL,		65536,		true},

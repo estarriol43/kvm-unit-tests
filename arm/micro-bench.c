@@ -109,6 +109,9 @@ static bool ipi_prep(void)
 {
 	u32 val;
 
+	if (is_realm())
+		return false;
+
 	val = readl(vgic_dist_base + GICD_CTLR);
 	if (readl(vgic_dist_base + GICD_TYPER2) & GICD_TYPER2_nASSGIcap) {
 		/* nASSGIreq can be changed only when GICD is disabled */
@@ -173,6 +176,9 @@ static bool lpi_prep(void)
 	struct its_collection *col1;
 	struct its_device *dev2;
 
+	if (is_realm())
+		return false;
+
 	if (!gicv3_its_base())
 		return false;
 
@@ -212,6 +218,9 @@ static void lpi_exec(void)
 
 static bool timer_prep(void)
 {
+	if (is_realm())
+		return false;
+
 	gic_enable_defaults();
 	install_irq_handler(EL1H_IRQ, gic_irq_handler);
 	local_irq_enable();

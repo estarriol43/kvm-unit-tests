@@ -295,6 +295,11 @@ static bool mmio_read_user_prep(void)
 	return true;
 }
 
+static void smc_exec(void)
+{
+	asm volatile("mov w0, #0x4b000000; smc #0" ::: "w0");
+}
+
 static void mmio_read_user_exec(void)
 {
 	readl(userspace_emulated_addr);
@@ -313,6 +318,8 @@ static void eoi_exec(void)
 	write_eoir(spurious_id);
 }
 
+static bool exec_select(void);
+
 struct exit_test {
 	const char *name;
 	bool (*prep)(void);
@@ -323,7 +330,7 @@ struct exit_test {
 };
 
 static struct exit_test tests[] = {
-	{"hvc",			NULL,			hvc_exec,		NULL,		65536,		true},
+	{"hyp_call",		exec_select,		hvc_exec,		NULL,		65536,		true},
 	{"host_call",		host_call_prep,		host_call_exec,		NULL,		65536,		true},
 	{"mmio_read_user",	mmio_read_user_prep,	mmio_read_user_exec,	NULL,		65536,		true},
 	{"mmio_read_vgic",	NULL,			mmio_read_vgic_exec,	NULL,		65536,		true},
@@ -333,6 +340,15 @@ static struct exit_test tests[] = {
 	{"lpi",			lpi_prep,		lpi_exec,		NULL,		65536,		true},
 	{"timer_10ms",		timer_prep,		timer_exec,		timer_post,	256,		true},
 };
+
+static bool exec_select(void)
+{
+	if (is_realm())
+		tests[0].exec = &smc_exec;
+	else
+		tests[0].exec = &hvc_exec;
+	return true;
+}
 
 struct ns_time {
 	uint64_t ns;

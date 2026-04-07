@@ -222,7 +222,7 @@ static void lpi_exec(void)
 
 static bool timer_prep(void)
 {
-	if (el2_present)
+	if (is_realm())
 		return false;
 
 	gic_enable_defaults();

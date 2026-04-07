@@ -390,7 +390,7 @@ static struct exit_test tests[] = {
 
 static bool exec_select(void)
 {
-	if (is_realm())
+	if (is_realm() || el2_present)
 		tests[0].exec = &smc_exec;
 	else
 		tests[0].exec = &hvc_exec;

@@ -331,6 +331,11 @@ static void eoi_exec(void)
 	write_eoir(spurious_id);
 }
 
+static bool hyp_inject_prep(void)
+{
+	return el2_present != 0;
+}
+
 static bool exec_select(void);
 
 static void *page_fault_mem;
@@ -371,6 +376,7 @@ struct exit_test {
 
 static struct exit_test tests[] = {
 	{"hyp_call",		exec_select,		hvc_exec,		NULL,		65536,		true},
+	{"hyp_inject",		hyp_inject_prep,	hvc_exec,		NULL,		65536,		true},
 	{"host_call",		host_call_prep,		host_call_exec,		NULL,		65536,		true},
 	{"mmio_read_user",	mmio_read_user_prep,	mmio_read_user_exec,	NULL,		65536,		true},
 	{"mmio_read_vgic",	NULL,			mmio_read_vgic_exec,	NULL,		65536,		true},

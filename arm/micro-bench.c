@@ -38,6 +38,8 @@ static unsigned long mmio_addr = QEMU_MMIO_ADDR;
 static void *vgic_dist_base;
 static void (*write_eoir)(u32 irqstat);
 
+extern unsigned long el2_present;
+
 static void gic_irq_handler(struct pt_regs *regs)
 {
 	u32 irqstat = gic_read_iar();
@@ -111,7 +113,7 @@ static bool ipi_prep(void)
 {
 	u32 val;
 
-	if (is_realm())
+	if (el2_present)
 		return false;
 
 	val = readl(vgic_dist_base + GICD_CTLR);
@@ -178,7 +180,7 @@ static bool lpi_prep(void)
 	struct its_collection *col1;
 	struct its_device *dev2;
 
-	if (is_realm())
+	if (el2_present)
 		return false;
 
 	if (!gicv3_its_base())
@@ -220,7 +222,7 @@ static void lpi_exec(void)
 
 static bool timer_prep(void)
 {
-	if (is_realm())
+	if (el2_present)
 		return false;
 
 	gic_enable_defaults();

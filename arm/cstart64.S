@@ -17,10 +17,16 @@
 #include <asm/sysreg.h>
 #include <asm/smc-rsi.h>
 
-.macro init_el, tmp
+.macro init_el, tmp, tmp2
 	mrs	\tmp, CurrentEL
 	cmp	\tmp, CurrentEL_EL2
 	b.ne	1f
+	/* Record EL2 presence */
+	adrp	\tmp, el2_present
+	add	\tmp, \tmp, :lo12:el2_present
+	mov	\tmp2, #1
+	str	\tmp2, [\tmp]
+
 	/* EL2 setup */
 	mrs	\tmp, mpidr_el1
 	msr	vmpidr_el2, \tmp
@@ -113,7 +119,7 @@ start:
 	 * make sure it is in the RsiRipas == RSI_RAM state.
 	 */
 reloc_done:
-	init_el x4
+	init_el x4, x5
 	bl	__early_mem_setup
 	/* zero BSS */
 	adrp	x4, bss
@@ -325,7 +331,7 @@ get_mmu_off:
 
 .globl secondary_entry
 secondary_entry:
-	init_el x0
+	init_el x0, x1
 
 	/* set SCTLR_EL1 to a known value */
 	ldr	x0, =INIT_SCTLR_EL1_MMU_OFF
@@ -636,3 +642,8 @@ el1_sync_64_hvc:
 
 el2_unhandled:
 	b	el2_unhandled
+
+.section .data
+.globl el2_present
+el2_present:
+	.quad 0

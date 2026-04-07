@@ -47,6 +47,9 @@
 	msr	cptr_el2, \tmp
 	ldr	\tmp, =(INIT_HCR_EL2_EL1_ONLY)
 	msr	hcr_el2, \tmp
+	adrp	\tmp, vector_table_el2
+	add	\tmp, \tmp, :lo12:vector_table_el2
+	msr	vbar_el2, \tmp
 	mov	\tmp, PSR_MODE_EL1t
 	msr	spsr_el2, \tmp
 	adrp	\tmp, 1f
@@ -604,3 +607,32 @@ vector_table:
 	ventry	el0_irq_32			// IRQ 32-bit EL0
 	ventry	el0_fiq_32			// FIQ 32-bit EL0
 	ventry	el0_error_32			// Error 32-bit EL0
+
+.align 11
+.globl vector_table_el2
+vector_table_el2:
+	ventry	el2_unhandled			// Synchronous EL2t
+	ventry	el2_unhandled			// IRQ EL2t
+	ventry	el2_unhandled			// FIQ EL2t
+	ventry	el2_unhandled			// Error EL2t
+
+	ventry	el2_unhandled			// Synchronous EL2h
+	ventry	el2_unhandled			// IRQ EL2h
+	ventry	el2_unhandled			// FIQ EL2h
+	ventry	el2_unhandled			// Error EL2h
+
+	ventry	el1_sync_64_hvc			// Synchronous 64-bit EL1
+	ventry	el2_unhandled			// IRQ 64-bit EL1
+	ventry	el2_unhandled			// FIQ 64-bit EL1
+	ventry	el2_unhandled			// Error 64-bit EL1
+
+	ventry	el2_unhandled			// Synchronous 32-bit EL1
+	ventry	el2_unhandled			// IRQ 32-bit EL1
+	ventry	el2_unhandled			// FIQ 32-bit EL1
+	ventry	el2_unhandled			// Error 32-bit EL1
+
+el1_sync_64_hvc:
+	eret
+
+el2_unhandled:
+	b	el2_unhandled

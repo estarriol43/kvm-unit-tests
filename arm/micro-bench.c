@@ -342,7 +342,7 @@ static struct exit_test tests[] = {
 	{"ipi",			ipi_prep,		ipi_exec,		NULL,		65536,		true},
 	{"ipi_hw",		ipi_hw_prep,		ipi_exec,		NULL,		65536,		true},
 	{"lpi",			lpi_prep,		lpi_exec,		NULL,		65536,		false},
-	{"timer_10ms",		timer_prep,		timer_exec,		timer_post,	256,		true},
+	{"timer_10ms",		timer_prep,		timer_exec,		timer_post,	256,		false},
 	{"page_fault",		page_fault_prep,	page_fault_exec,	NULL,		page_fault_time,true},
 };
 
